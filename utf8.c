@@ -82,96 +82,99 @@ static inline int CheckBit(unsigned char value, int bit)
 	}
 }
 
-//2 utf8 dom
-//1 utf8
-//0 not utf8
+// 2 utf8 dom
+// 1 utf8
+// 0 not utf8
 int IsUtf8(char* buf,int size)
 {
-	int i;
-	int u8 = 0;
-	int u8len = 0;
-	int firstbyte = 0;
-	const char BOM[3] = {0xef,0xbb,0xbf};
+    int i;
+    int u8 = 0;
+    int u8len = 0;
+    int firstbyte = 0;
+    int pureEn = 1;
+    const char BOM[3] = {0xef,0xbb,0xbf};
 
-	if(size == 0)
-	{
-		return 0;
-	}
-	if(size >= 3 && strncmp(buf,BOM,3) == 0)
-	{
-		return 2;
-	}
+    if(size == 0)
+    {
+        return 1;
+    }
+    if(size >= 3 && strncmp(buf,BOM,3) == 0)
+    {
+        return 2;
+    }
 
-	for(i=0;i<size;i++)
-	{
-		//should be binrary file.
-		if(buf[i] == 0)
-		{
-			return 0;
-		}
+    for(i=0;i<size;i++)
+    {
+        //should be binrary file.
+        if(buf[i] == 0)
+        {
+            return 0;
+        }
 
 
-		if(firstbyte == 0)
-		{
-			//pure ascii
-			if((buf[i]&0xff) <= 127)
-			{
-				u8 = 0;
-				u8len = 0;
-			}
-			//out of u8 range
-			else if((buf[i]&0xff) > 0xef)
-			{
-				u8 = 0;
-				u8len = 0;
-			}
-			else
-			{
-				firstbyte = 1;
-				//u8 3b 1110xxxx 10xxxxxx 10xxxxxx
-				if(CheckBit(buf[i],7) == 1 && CheckBit(buf[i],6) == 1 && CheckBit(buf[i],5) == 0)
-				{
-					u8 = 1;
-					u8len++;
-				}
-				else
-				{
-					i++;
-					firstbyte = 0;
-					u8 = 0;
-					u8len = 0;
-				}
-			}
-		}
-		else
-		{
-			if((buf[i]&0xff) <= 127 || (buf[i]&0xff) > 0xbf)
-			{
-				firstbyte = 0;
-				
-				if(u8 == 1 && u8len % 3 != 0)
-				{
-					u8 = 0;
-				}
-				else if(u8 == 1 && u8len % 3 == 0)
-				{
-					//so we mark it utf8
-					break;
-				}
-			}
-			else
-			{
-				u8len++;
-			}
-		}
-	}
+        if(firstbyte == 0)
+        {
+            //pure ascii
+            if((buf[i]&0xff) <= 127)
+            {
+                u8 = 0;
+                u8len = 0;
+            }
+            //out of u8 range
+            else if((buf[i]&0xff) > 0xef)
+            {
+                u8 = 0;
+                u8len = 0;
+            }
+            else
+            {
+                firstbyte = 1;
+                pureEn = 0;
+                //u8 3b 1110xxxx 10xxxxxx 10xxxxxx
+                if(CheckBit(buf[i],7) == 1 && CheckBit(buf[i],6) == 1 && CheckBit(buf[i],5) == 0)
+                {
+                    u8 = 1;
+                    u8len++;
+                }
+                else
+                {
+                    i++;
+                    firstbyte = 0;
+                    u8 = 0;
+                    u8len = 0;
+                }
+            }
+        }
+        else
+        {
+            if((buf[i]&0xff) <= 127 || (buf[i]&0xff) > 0xbf)
+            {
+                firstbyte = 0;
 
-	//check tail loop
-	if(u8 == 1 && u8len % 3 != 0)
-	{
-		u8 = 0;
-	}
+                if(u8 == 1 && u8len % 3 != 0)
+                {
+                    u8 = 0;
+                }
+                else if(u8 == 1 && u8len % 3 == 0)
+                {
+                    //so we mark it utf8
+                    break;
+                }
+            }
+            else
+            {
+                u8len++;
+            }
+        }
+    }
 
-	return u8;
+    //check tail loop
+    if(u8 == 1 && u8len % 3 != 0)
+    {
+        u8 = 0;
+    }
+    if (pureEn)
+        return 1;
+    return u8;
 }
 
